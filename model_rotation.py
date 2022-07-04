@@ -529,12 +529,8 @@ class PCT_patch_semseg(nn.Module):
         self.bn__ = nn.BatchNorm1d(1024)
         self.conv__ = nn.Sequential(nn.Conv1d(512, 1024, kernel_size=1, bias=False),      #128*64=8096
                                    self.bn__,        #256
-                                   nn.LeakyReLU(negative_slope=0.2))        #0
-        self.bnsample = nn.BatchNorm1d(256)
-        self.conv_sample = nn.Sequential(nn.Conv1d(512, 256, kernel_size=1, bias=False),    #192*1024=196068
-                                   self.bnsample,        #1024*2*2=4096
-                                   nn.LeakyReLU(negative_slope=0.2))               
-        self.conv5 = nn.Conv1d(1024 * 3, 512, 1)
+                                   nn.LeakyReLU(negative_slope=0.2))        #0            
+        self.conv5 = nn.Conv1d(1024 * 3+512, 512, 1)
         self.dp5 = nn.Dropout(0.5)
 
 
@@ -558,7 +554,7 @@ class PCT_patch_semseg(nn.Module):
         #############################
         ## Create Local-Global Attention
         self.decoder_layer = nn.TransformerDecoderLayer(self.d_model, nhead=4)
-        self.last_layer = PTransformerDecoderLayer(self.d_model, nhead=4, last_dim=256)
+        self.last_layer = PTransformerDecoderLayer(self.d_model, nhead=4, last_dim=512)
         self.custom_decoder = PTransformerDecoder(self.decoder_layer, 2, self.last_layer)
         self.transformer_model = nn.Transformer(d_model=self.d_model,nhead=4,num_encoder_layers=2,num_decoder_layers=2,custom_decoder=self.custom_decoder,)
         self.transformer_model.apply(init_weights)
@@ -571,7 +567,7 @@ class PCT_patch_semseg(nn.Module):
         self.convup = nn.Sequential(nn.Conv1d(256, 1024, kernel_size=1, bias=False),         
                                    self.bnup,        #2048
                                    nn.LeakyReLU(negative_slope=0.2))       
-        self.conv6 = nn.Conv1d(768, 256, 1)
+        self.conv6 = nn.Conv1d(512, 256, 1)
         self.conv7 = nn.Conv1d(256, 7, 1)
         self.bn5 = nn.BatchNorm1d(512)
         self.bn6 = nn.BatchNorm1d(256)
@@ -590,6 +586,7 @@ class PCT_patch_semseg(nn.Module):
         x = torch.bmm(x, trans)
         #Visuell_PointCloud_per_batch(x,target)
         x=x.permute(0,2,1)
+        x_sample=x
 
         x = get_neighbors(x, k=self.k)       # (batch_size, 3, num_points) -> (batch_size, 3*2, num_points, k)
         x = self.conv1(x)                        # (batch_size, 3*2, num_points, k) -> (batch_size, 64, num_points, k)
@@ -611,7 +608,9 @@ class PCT_patch_semseg(nn.Module):
         x4 = self.sa4(x3)                      #(batch_size, 64*2, num_points)->(batch_size, 64*2, num_points)
         x = torch.cat((x1, x2, x3, x4), dim=-1)      #(batch_size, 64*2, num_points)*4->(batch_size, 512, num_points)
         x=x.permute(0,2,1)
-        x_sample=self.conv_sample(x)
+        #global info    
+        x_global=x
+
         x = self.conv__(x)                           # (batch_size, 512, num_points)->(batch_size, 1024, num_points) 
         x11 = x.max(dim=-1, keepdim=False)[0]       # (batch_size, 1024, num_points) -> (batch_size, 1024)
         x11=x11.unsqueeze(-1).repeat(1,1,num_points)# (batch_size, 1024)->(batch_size, 1024, num_points)
@@ -619,12 +618,17 @@ class PCT_patch_semseg(nn.Module):
         x12=x12.unsqueeze(-1).repeat(1,1,num_points)# (batch_size, 1024)->(batch_size, 1024, num_points)
         x_global_integrated = torch.cat((x11, x12), dim=1)     # (batch_size,1024,num_points)+(batch_size, 1024,num_points)-> (batch_size, 2048,num_points)
         x=torch.cat((x,x_global_integrated),dim=1)             # (batch_size,2048,num_points)+(batch_size, 1024,num_points) ->(batch_size, 3036,num_points)
-        x=self.relu(self.bn5(self.conv5(x)))        # (batch_size, 3036,num_points)-> (batch_size, 512,num_points)
-        x=self.dp5(x)
 
 
-        #global info    
-        x_global=x
+
+
+
+        #############################################
+        ## sample Features
+        #############################################                                           
+        for i, sort_conv in enumerate(self.sort_cnn):                       #[bs,1,Cor,n_points]->[bs,256,n_points]
+            bn = self.sort_bn[i]
+            x_sample = self.actv_fn(bn(sort_conv(x_sample)))
 
         #patch
         x_patch,result,goal,mask=self.superpointnet(x_sample,input,target)
@@ -632,16 +636,18 @@ class PCT_patch_semseg(nn.Module):
        #############################################
         ## Point Transformer
         #############################################
-        target = x_global.permute(2, 0, 1)                                        # [bs,1024,64]->[64,bs,1024]
+        target_ = x_global.permute(2, 0, 1)                                        # [bs,1024,64]->[64,bs,1024]
         source = x_patch.permute(2, 0, 1)                           # [bs,1024,10]->[10,bs,1024]
-        embedding = self.transformer_model(source, target)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
+        embedding = self.transformer_model(source, target_)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
         embedding=embedding.permute(1,2,0)                                  # [16,bs,512]->[bs,512,16]
         # embedding=self.convup(embedding)
 
         ################################################
         ##segmentation
         ################################################
-        x=torch.cat((x_global,embedding),dim=1)
+        x=torch.cat((x,embedding),dim=1)             # (batch_size,2048,num_points)+(batch_size, 1024,num_points) ->(batch_size, 3036,num_points)
+        x=self.relu(self.bn5(self.conv5(x)))        # (batch_size, 3036,num_points)-> (batch_size, 512,num_points)
+        x=self.dp5(x)
         x=self.relu(self.bn6(self.conv6(x)))        # (batch_size, 512,num_points) ->(batch_size,256,num_points)
         x=self.conv7(x)                             # # (batch_size, 256,num_points) ->(batch_size,6,num_points)
         

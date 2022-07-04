@@ -17,7 +17,8 @@ For example, if there is no installation of open3d in the process of running of 
 
 You can use below command line to run the pretraining script and gain the pretraining model:
 ```
-CUDA_VISIBLE_DEVICES=0 python train_semseg.py --batch_size 16 --test_batch_size 16 --npoints 2048 --epoch 50 --model My_Net5 --change without_rotation_16_2048_50  --exp training_125 --bolt_weight 1  --root /home/ies/bi/data/training_125
+CUDA_VISIBLE_DEVICES=4,5 python train_semseg_rotation.py --batch_size 16 --test_batch_size 16 --npoints 2048 --epoch 100 --model PCT_patch --lr 0.01   --change STN_16_2048_100_Patch --factor_trans 0.01 --factor_cluster 0.2 --use_weigth "" --bolt_weight 15 --exp dataset6 --bolt_weight  1 --root /home/ies/bi/data/Dataset6
+
 ```
 Explanation of every important parameter
 * train_semseg.py: choose of which script will be run
@@ -30,7 +31,7 @@ Explanation of every important parameter
 ## Train the finetune model
 You can use below command line to run the finetune script and gain the training result:
 ```
-CUDA_VISIBLE_DEVICES=0 python train_semseg.py --batch_size 16 --test_batch_size 16 --npoints 2048 --epoch 300 --model My_Net3 --change without_rotation_16_2048_50  --exp training_125 --bolt_weight 1 --finetune True  --root /home/ies/bi/data/previous_finetune
+CUDA_VISIBLE_DEVICES=4,5 python train_semseg_rotation.py --batch_size 16 --test_batch_size 16 --npoints 2048 --epoch 100 --model PCT_patch --lr 0.01   --change STN_16_2048_100_Patch --factor_trans 0.01 --factor_cluster 0.2 --use_weigth "" --bolt_weight 15 --exp dataset6 --bolt_weight  1 --finetune True   --root /home/ies/bi/data/previous_finetune
 ```
 Here we have another parameter,finetune,which is set by default as False, if we set it as True, we will train the finetune model.
 

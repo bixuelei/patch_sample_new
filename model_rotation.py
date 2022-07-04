@@ -376,6 +376,7 @@ class ball_query_sample_with_goal(nn.Module):                                #to
 
         """
         super(ball_query_sample_with_goal, self).__init__()
+        self.point_after=args.p_a
         self.args=args
         self.num_heads=args.num_heads
         self.num_layers=args.num_layers
@@ -415,7 +416,7 @@ class ball_query_sample_with_goal(nn.Module):                                #to
             ]
         )
 
-    def forward(self, hoch_features, input,target):                                          #[bs,1,features,n_points]   [bs,C,n_points]
+    def forward(self, hoch_features, input,x_a_r,target):                                          #[bs,1,features,n_points]   [bs,C,n_points]
 
         top_k = self.top_k                                                             #16
         origial_hoch_features = hoch_features                                          #[bs,1,features,n_points]
@@ -472,8 +473,10 @@ class ball_query_sample_with_goal(nn.Module):                                #to
             all_points[:, :, :3],
             query_points[:, :, :3],
         )
-
-        radius_points = index_points(all_points, radius_indices)                    #[bs,n_superpoint,n_sample,C]
+        if self.point_after:
+            radius_points = index_points(x_a_r.permute(0,2,1), radius_indices)
+        else:
+            radius_points = index_points(all_points, radius_indices)                    #[bs,n_superpoint,n_sample,C]
 
         radius_centroids = query_points.unsqueeze(dim=-2)                           #[bs,n_superpoint,1,C]
         radius_grouped = torch.cat([radius_centroids, radius_points], dim=-2).unsqueeze(
@@ -494,6 +497,7 @@ class ball_query_sample_with_goal(nn.Module):                                #to
 class PCT_patch_semseg(nn.Module):
     def __init__(self, args):
         super(PCT_patch_semseg, self).__init__()
+        self.source_sample_after_rotate=args.s_a_r
         self.actv_fn = nn.LeakyReLU(negative_slope=0.2)
         self.p_dropout = args.dropout
         self.input_dim = 3
@@ -586,7 +590,7 @@ class PCT_patch_semseg(nn.Module):
         x = torch.bmm(x, trans)
         #Visuell_PointCloud_per_batch(x,target)
         x=x.permute(0,2,1)
-        x_sample=x
+        x_a_r=x
 
         x = get_neighbors(x, k=self.k)       # (batch_size, 3, num_points) -> (batch_size, 3*2, num_points, k)
         x = self.conv1(x)                        # (batch_size, 3*2, num_points, k) -> (batch_size, 64, num_points, k)
@@ -625,13 +629,19 @@ class PCT_patch_semseg(nn.Module):
 
         #############################################
         ## sample Features
-        #############################################                                           
+        #############################################  
+        if self.source_sample_after_rotate:
+            x_sample=x_a_r  
+        else:
+            x_sample=input  
+
         for i, sort_conv in enumerate(self.sort_cnn):                       #[bs,1,Cor,n_points]->[bs,256,n_points]
+
             bn = self.sort_bn[i]
             x_sample = self.actv_fn(bn(sort_conv(x_sample)))
 
         #patch
-        x_patch,result,goal,mask=self.superpointnet(x_sample,input,target)
+        x_patch,result,goal,mask=self.superpointnet(x_sample,input,x_a_r,target)
 
        #############################################
         ## Point Transformer

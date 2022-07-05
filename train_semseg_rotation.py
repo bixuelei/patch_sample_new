@@ -26,7 +26,7 @@ import shutil
 import datetime
 from tqdm import tqdm
 from torchsummary import summary
-from display import *
+# from display import *
 
 
 
@@ -219,10 +219,10 @@ def train(args, io):
             for i,(points,seg) in tqdm(enumerate(test_loader),total=len(test_loader),smoothing=0.9):
                 points, seg = points.to(device), seg.to(device)
                 points=normalize_data(points)
-                points,GT=rotate_per_batch(points)
+                points,GT=rotate_per_batch(points,None)
                 points = points.permute(0, 2, 1)
                 batch_size = points.size()[0]
-                seg_pred_,trans_,_,_,_= model(points.float(),seg)
+                seg_pred_,trans_= model(points.float(),seg)
                 seg_pred_ = seg_pred_.permute(0, 2, 1).contiguous()
                 batch_label = seg.view(-1, 1)[:, 0].cpu().data.numpy()   #array(batch_size*num_points)
                 loss = criterion(seg_pred_.view(-1, NUM_CLASS), seg.view(-1,1).squeeze(),weights__,using_weight=args.use_weigth)     #a scalar
@@ -426,7 +426,7 @@ if __name__ == "__main__":
                         help='Model to use, [dgcnn]')
     parser.add_argument('--batch_size', type=int, default=2, metavar='batch_size',
                         help='Size of batch)')
-    parser.add_argument('--root', type=str, default='/home/bi/study/thesis/data/synthetic/Dataset4', 
+    parser.add_argument('--root', type=str, default='/home/bi/study/thesis/data/test', 
                         help='file need to be tested')
     parser.add_argument('--exp', type=str, default='test', metavar='N',
                         help='experiment version to record reslut')

@@ -665,5 +665,5 @@ class PCT_patch_semseg(nn.Module):
         if self.args.training:
             return x,trans,result
         else:
-            return x,trans,None
+            return x,trans
 

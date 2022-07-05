@@ -41,7 +41,6 @@ def cal_loss(pred, gold,weights, smoothing=False,using_weight=False):
 
 
 def mean_loss(input,target,mask):
-    mask=mask.to(torch.device("cuda"))
     mse_loss = nn.MSELoss(reduction='none')
     loss = mse_loss(input, target)
     loss = torch.sum(loss,dim=1)
@@ -153,35 +152,61 @@ def rotate_per_batch(data,goals,angle_clip=np.pi*1):
         Return:
           BXNx3 array, rotated batch of point clouds
     """
-    data=data.float()
-    goals=goals.float()
-    rotated_data = torch.zeros(data.shape, dtype=torch.float32)
-    rotated_data = rotated_data.cuda()
+    if goals!=None:
+        data=data.float()
+        goals=goals.float()
+        rotated_data = torch.zeros(data.shape, dtype=torch.float32)
+        rotated_data = rotated_data.cuda()
 
-    rotated_goals = torch.zeros(goals.shape, dtype=torch.float32).cuda()
-    batch_size=data.shape[0]
-    rotation_matrix=torch.zeros((batch_size,3,3),dtype=torch.float32).cuda()
-    for k in range(data.shape[0]):
-        angles=[]
-        for i in range(3): 
-            angles.append(random.uniform(-angle_clip,angle_clip))
-        angles=np.array(angles)
-        Rx = np.array([[1,0,0],
-                       [0,np.cos(angles[0]),-np.sin(angles[0])],
-                       [0,np.sin(angles[0]),np.cos(angles[0])]])
-        Ry = np.array([[np.cos(angles[1]),0,np.sin(angles[1])],
-                       [0,1,0],
-                       [-np.sin(angles[1]),0,np.cos(angles[1])]])
-        Rz = np.array([[np.cos(angles[2]),-np.sin(angles[2]),0],
-                       [np.sin(angles[2]),np.cos(angles[2]),0],
-                       [0,0,1]])
-        R = np.dot(Rz, np.dot(Ry,Rx))
-        R=torch.from_numpy(R).float().cuda()
-        rotated_data[k,:,:] = torch.matmul(data[k,:,:], R)
-        rotated_goals[k,:,:] == torch.matmul(goals[k,:,:], R)
-        rotation_matrix[k,:,:]= R
-    return rotated_data,rotated_goals,rotation_matrix
+        rotated_goals = torch.zeros(goals.shape, dtype=torch.float32).cuda()
+        batch_size=data.shape[0]
+        rotation_matrix=torch.zeros((batch_size,3,3),dtype=torch.float32).cuda()
+        for k in range(data.shape[0]):
+            angles=[]
+            for i in range(3): 
+                angles.append(random.uniform(-angle_clip,angle_clip))
+            angles=np.array(angles)
+            Rx = np.array([[1,0,0],
+                        [0,np.cos(angles[0]),-np.sin(angles[0])],
+                        [0,np.sin(angles[0]),np.cos(angles[0])]])
+            Ry = np.array([[np.cos(angles[1]),0,np.sin(angles[1])],
+                        [0,1,0],
+                        [-np.sin(angles[1]),0,np.cos(angles[1])]])
+            Rz = np.array([[np.cos(angles[2]),-np.sin(angles[2]),0],
+                        [np.sin(angles[2]),np.cos(angles[2]),0],
+                        [0,0,1]])
+            R = np.dot(Rz, np.dot(Ry,Rx))
+            R=torch.from_numpy(R).float().cuda()
+            rotated_data[k,:,:] = torch.matmul(data[k,:,:], R)
+            rotated_goals[k,:,:] == torch.matmul(goals[k,:,:], R)
+            rotation_matrix[k,:,:]= R
+        return rotated_data,rotated_goals,rotation_matrix
+    else:
+        data=data.float()
+        rotated_data = torch.zeros(data.shape, dtype=torch.float32)
+        rotated_data = rotated_data.cuda()
 
+        batch_size=data.shape[0]
+        rotation_matrix=torch.zeros((batch_size,3,3),dtype=torch.float32).cuda()
+        for k in range(data.shape[0]):
+            angles=[]
+            for i in range(3): 
+                angles.append(random.uniform(-angle_clip,angle_clip))
+            angles=np.array(angles)
+            Rx = np.array([[1,0,0],
+                        [0,np.cos(angles[0]),-np.sin(angles[0])],
+                        [0,np.sin(angles[0]),np.cos(angles[0])]])
+            Ry = np.array([[np.cos(angles[1]),0,np.sin(angles[1])],
+                        [0,1,0],
+                        [-np.sin(angles[1]),0,np.cos(angles[1])]])
+            Rz = np.array([[np.cos(angles[2]),-np.sin(angles[2]),0],
+                        [np.sin(angles[2]),np.cos(angles[2]),0],
+                        [0,0,1]])
+            R = np.dot(Rz, np.dot(Ry,Rx))
+            R=torch.from_numpy(R).float().cuda()
+            rotated_data[k,:,:] = torch.matmul(data[k,:,:], R)
+            rotation_matrix[k,:,:]= R
+        return rotated_data,rotation_matrix
 
 def feature_transform_reguliarzer(trans,GT=None):
     d = trans.size()[1]

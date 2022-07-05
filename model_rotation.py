@@ -15,7 +15,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 from attention_util import *
 from util import *
-from pointnet_util import PointNetSetAbstraction,PointNetFeaturePropagation,PointNetSetAbstractionMsg, find_goals_fps, find_goals_kmeans, index_points,query_ball_point
+from pointnet_util import PointNetSetAbstraction,PointNetFeaturePropagation,PointNetSetAbstractionMsg, find_goals_fps, index_points,query_ball_point
 from torch.autograd import Variable
 # from display import *
 
@@ -559,8 +559,9 @@ class PCT_patch_semseg(nn.Module):
         ## Create Local-Global Attention
         self.decoder_layer = nn.TransformerDecoderLayer(self.d_model, nhead=4)
         self.last_layer = PTransformerDecoderLayer(self.d_model, nhead=4, last_dim=512)
-        self.custom_decoder = PTransformerDecoder(self.decoder_layer, 2, self.last_layer)
-        self.transformer_model = nn.Transformer(d_model=self.d_model,nhead=4,num_encoder_layers=2,num_decoder_layers=2,custom_decoder=self.custom_decoder,)
+        self.custom_decoder = PTransformerDecoder(self.decoder_layer, 1, self.last_layer)
+        # self.transformer_model = nn.Transformer(d_model=self.d_model,nhead=4,num_encoder_layers=2,num_decoder_layers=2,custom_decoder=self.custom_decoder,)
+        self.transformer_model = nn.Transformer(d_model=self.d_model,nhead=4,num_encoder_layers=1,num_decoder_layers=1)
         self.transformer_model.apply(init_weights)
 
 
@@ -661,5 +662,8 @@ class PCT_patch_semseg(nn.Module):
         x=self.relu(self.bn6(self.conv6(x)))        # (batch_size, 512,num_points) ->(batch_size,256,num_points)
         x=self.conv7(x)                             # # (batch_size, 256,num_points) ->(batch_size,6,num_points)
         
-        return x,trans,result,goal,mask
+        if self.args.training:
+            return x,trans,result,goal,mask
+        else:
+            return x,trans,None,None,None
 

@@ -517,7 +517,7 @@ def main():
     # Visuell_PointCloud(patch_motor)
 
 
-    file_path="/home/bi/study/thesis/data/synthetic/Dataset2_addition_"
+    file_path="/home/bi/study/thesis/data/synthetic/Dataset4"
     List_motor = os.listdir(file_path)
     if 'display.py' in List_motor :
         List_motor.remove('display.py')

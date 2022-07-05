@@ -1,0 +1,4 @@
+Using GPU : 0 from 1 devices
+Namespace(batch_size=2, bolt_weight=15, change='hhh', cuda=True, dropout=0.5, emb_dims=1024, epochs=400, eval=False, exp='test', factor_cluster=0.2, factor_trans=0.01, finetune=False, hidden_size=512, k=20, lr=0.01, model='PCT_patch', momentum=0.9, no_cuda=False, npoints=2048, num_heads=4, num_layers=1, p_a=1, root='/home/bi/study/thesis/data/synthetic/Dataset4', s_a_r=1, scheduler='cos', seed=1, self_encoder_latent_features=128, test_batch_size=8, test_symbol='Test', training=True, use_sgd=True, use_weigth=False, validation_symbol='Validation')
+tensor([0.6587, 0.1736, 0.0485, 0.0229, 0.0861, 0.0014, 0.0088],
+       device='cuda:0')

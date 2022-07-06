@@ -157,8 +157,11 @@ def train(args, io):
         total_iou_deno_class__ = [0 for _ in range(NUM_CLASS)]
         for i,(points,target,goals,masks) in tqdm(enumerate(train_loader),total=len(train_loader),smoothing=0.9):
             points, target,goals,masks = points.to(device), target.to(device) ,goals.to(device) ,masks.to(device)       #(batch_size, num_points, features)    (batch_size, num_points)
-            points=normalize_data(points)                               #[bs,4096,3]
-            points,rotated_goals,GT=rotate_per_batch(points,goals)
+            points=normalize_data(points) 
+            if args.s_a_r:                              #[bs,4096,3]
+                points,goals,GT=rotate_per_batch(points,goals)
+            else:
+                points,_,GT=rotate_per_batch(points,goals)
             # Visuell_PointCloud_per_batch_according_to_label(points,target)
             points = points.permute(0, 2, 1)                            #(batch_size,features,numpoints)
             batch_size = points.size()[0]
@@ -167,7 +170,7 @@ def train(args, io):
             seg_pred = seg_pred.permute(0, 2, 1).contiguous()                      #(batch_size,num_points, class_categories)
             batch_label = target.view(-1, 1)[:, 0].cpu().data.numpy()              #array(batch_size*num_points)            loss = criterion(seg_pred.view(-1, NUM_CLASS), target.view(-1,1).squeeze(),weights,using_weight=args.use_weigth)     #a scalar
             loss = criterion(seg_pred.view(-1, NUM_CLASS), target.view(-1,1).squeeze(),weights__,using_weight=args.use_weigth)     #a scalar
-            loss=loss+criterion2(result.view(-1, 3),rotated_goals.view(-1, 3),masks)*args.factor_cluster
+            loss=loss+criterion2(result.view(-1, 3),goals.view(-1, 3),masks)*args.factor_cluster
             loss = loss+feature_transform_reguliarzer(trans)*args.factor_trans
             loss.backward()
             opt.step()
@@ -438,7 +441,7 @@ if __name__ == "__main__":
                         help='evaluate the model')
     parser.add_argument('--training', type=bool,  default=True,
                         help='evaluate the model')
-    parser.add_argument('--factor_cluster', type=float, default=0.2, metavar='F',
+    parser.add_argument('--factor_cluster', type=float, default=0.05, metavar='F',
                         help='factor of loss_cluster')
     parser.add_argument('--factor_trans', type=float, default=0.01, metavar='F',
                         help='factor of loss_cluster')
@@ -485,7 +488,7 @@ if __name__ == "__main__":
                         help='number of hidden_size for self_attention ')
     parser.add_argument('--p_a', type=int, default=1, metavar='S',
                         help='get the neighbors from rotated points for each superpoints')
-    parser.add_argument('--s_a_r', type=int, default=1, metavar='S',
+    parser.add_argument('--s_a_r', type=int, default=0, metavar='S',
                         help='get the high dimensional features for patch sample to get super points with rotated points')
     args = parser.parse_args()
 

@@ -15,7 +15,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 from attention_util import *
 from util import *
-from pointnet_util import PointNetSetAbstraction,PointNetFeaturePropagation,PointNetSetAbstractionMsg, find_goals_fps, find_goals_kmeans, index_points,query_ball_point
+from pointnet_util import PointNetSetAbstraction,PointNetFeaturePropagation,PointNetSetAbstractionMsg, index_points,query_ball_point
 from torch.autograd import Variable
 # from display import *
 
@@ -395,7 +395,7 @@ class ball_query_sample_with_goal(nn.Module):                                #to
 
         self.loss_function=nn.MSELoss()
  
-        self.feat_channels_1d = [self.num_feats,64, 32, 8]
+        self.feat_channels_1d = [self.num_feats,64, 32, 16]
         self.feat_generator = create_conv1d_serials(self.feat_channels_1d)
         self.feat_generator.apply(init_weights)
         self.feat_bn = nn.ModuleList(

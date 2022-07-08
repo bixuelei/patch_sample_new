@@ -488,7 +488,7 @@ if __name__ == "__main__":
                         help='number of hidden_size for self_attention ')
     parser.add_argument('--p_a', type=int, default=1, metavar='S',
                         help='get the neighbors from rotated points for each superpoints')
-    parser.add_argument('--s_a_r', type=int, default=0, metavar='S',
+    parser.add_argument('--s_a_r', type=int, default=1, metavar='S',
                         help='get the high dimensional features for patch sample to get super points with rotated points')
     args = parser.parse_args()
 

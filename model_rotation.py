@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-from attention_util import *
+from attention_util import create_conv1d_serials,create_conv3d_serials,SA_Layer_Single_Head,SA_Layer_Multi_Head,PTransformerDecoderLayer,PTransformerDecoder,init_weights,SA_Layers
 from util import *
 from pointnet_util import PointNetSetAbstraction,PointNetFeaturePropagation,PointNetSetAbstractionMsg, index_points,query_ball_point
 from torch.autograd import Variable
@@ -471,8 +471,8 @@ class ball_query_sample_with_goal(nn.Module):                                #to
             self.radius,
             self.max_radius_points,
             all_points[:, :, :3],
-            query_points[:, :, :3],
-        )
+            query_points[:, :, :3],)
+
         if self.point_after:
             radius_points = index_points(x_a_r.permute(0,2,1), radius_indices)
         else:
@@ -534,7 +534,7 @@ class PCT_patch_semseg(nn.Module):
         self.conv__ = nn.Sequential(nn.Conv1d(512, 1024, kernel_size=1, bias=False),      #128*64=8096
                                    self.bn__,        #256
                                    nn.LeakyReLU(negative_slope=0.2))        #0            
-        self.conv5 = nn.Conv1d(1024 * 3+512, 512, 1)
+        self.conv5 = nn.Conv1d(1024 * 3, 512, 1)
         self.dp5 = nn.Dropout(0.5)
 
 
@@ -572,10 +572,11 @@ class PCT_patch_semseg(nn.Module):
         self.convup = nn.Sequential(nn.Conv1d(256, 1024, kernel_size=1, bias=False),         
                                    self.bnup,        #2048
                                    nn.LeakyReLU(negative_slope=0.2))       
-        self.conv6 = nn.Conv1d(512, 256, 1)
+        self.conv6 = nn.Conv1d(1024, 256, 1)
         self.conv7 = nn.Conv1d(256, 7, 1)
         self.bn5 = nn.BatchNorm1d(512)
         self.bn6 = nn.BatchNorm1d(256)
+        self.dp6=nn.Dropout(0.5)
         self.relu = nn.ReLU()
 
         
@@ -647,21 +648,21 @@ class PCT_patch_semseg(nn.Module):
        #############################################
         ## Point Transformer
         #############################################
-        target_ = x_global.permute(2, 0, 1)                                        # [bs,1024,64]->[64,bs,1024]
+        target = x_global.permute(2, 0, 1)                                        # [bs,1024,64]->[64,bs,1024]
         source = x_patch.permute(2, 0, 1)                           # [bs,1024,10]->[10,bs,1024]
-        embedding = self.transformer_model(target_,source)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
+        embedding = self.transformer_model(source,target)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
         embedding=embedding.permute(1,2,0)                                  # [16,bs,512]->[bs,512,16]
         # embedding=self.convup(embedding)
 
         ################################################
         ##segmentation
         ################################################
-        embedding = embedding.max(dim=-1, keepdim=False)[0]
-        embedding=embedding.unsqueeze(-1).repeat(1,1,num_points)
+        # embedding = embedding.max(dim=-1, keepdim=False)[0]
+        # embedding=embedding.unsqueeze(-1).repeat(1,1,num_points)
+        x=self.relu(self.bn5(self.conv5(x)))
         x=torch.cat((x,embedding),dim=1)             # (batch_size,2048,num_points)+(batch_size, 1024,num_points) ->(batch_size, 3036,num_points)
-        x=self.relu(self.bn5(self.conv5(x)))        # (batch_size, 3036,num_points)-> (batch_size, 512,num_points)
-        x=self.dp5(x)
         x=self.relu(self.bn6(self.conv6(x)))        # (batch_size, 512,num_points) ->(batch_size,256,num_points)
+        x=self.dp6(x)
         x=self.conv7(x)                             # # (batch_size, 256,num_points) ->(batch_size,6,num_points)
         
         if self.args.training:

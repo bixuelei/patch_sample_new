@@ -13,7 +13,7 @@ from tqdm import tqdm           #used to display the circulation position, to se
 from torch.utils.data import Dataset
 from sklearn.neighbors import NearestNeighbors
 # from display import Visuell_PointCloud
-from pointnet_util import index_points,Visuell
+from pointnet_util import index_points#,Visuell,Visuell__
 import torch
 # from kmeans_pytorch import kmeans
 
@@ -58,6 +58,7 @@ def densify_blots(patch_motor):
             inter.append(interpolation)
     patch_motor=np.concatenate((patch_motor,inter),axis=0)
     return patch_motor
+
 
 
 def knn(x, k):
@@ -127,13 +128,13 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
 # )
         _,c1=kmeans(X=points1, num_clusters=goals_[0],distance='euclidean', device=torch.device('cuda'))
 #         c1=c1.cuda()
-        # #######################
+        #######################
         # Visuell(points1,c1)
         # together1=torch.cat([c1,points1],dim=0).unsqueeze(0)
         # index1=knn(together1.permute(0, 2, 1),2)
         # inter=index1[0,0:goals_[0],1]
         # Visuell__(together1.squeeze(0),inter)
-        ##########################
+        #########################
         # sqr1=square_distance(c1.unsqueeze(0),points1.unsqueeze(0))
         # together1=torch.cat([c1,points1],dim=0).unsqueeze(0)
         # index1=knn(together1.permute(0, 2, 1),2)[0,0:goals_[0],1].unsqueeze(0)
@@ -325,13 +326,13 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
         # _,c7=KMeans(points7,goals_[6],Niter=300)
         _,c7=kmeans(X=points7, num_clusters=goals_[6], distance='euclidean', device=torch.device('cpu'))
         # c7=c7.cuda()
-        ########################
+        #######################
         # Visuell(points7,c7)
-        # # together7=torch.cat([c7,points7],dim=0).unsqueeze(0)
-        # # index7=knn(together7.permute(0, 2, 1),2)
-        # # inter=index7[0,0:goals_[6],1]
-        # # Visuell__(together7.squeeze(0),inter)
-        # ############################
+        # together7=torch.cat([c7,points7],dim=0).unsqueeze(0)
+        # index7=knn(together7.permute(0, 2, 1),2)
+        # inter=index7[0,0:goals_[6],1]
+        # Visuell__(together7.squeeze(0),inter)
+        ############################
         together7=torch.cat([c7,points7],dim=0).unsqueeze(0)
         index7=knn(together7.permute(0, 2, 1),2)[0,0:goals_[6],1].unsqueeze(0)
         added7=index_points(together7,index7)

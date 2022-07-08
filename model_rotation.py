@@ -649,13 +649,15 @@ class PCT_patch_semseg(nn.Module):
         #############################################
         target_ = x_global.permute(2, 0, 1)                                        # [bs,1024,64]->[64,bs,1024]
         source = x_patch.permute(2, 0, 1)                           # [bs,1024,10]->[10,bs,1024]
-        embedding = self.transformer_model(source, target_)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
+        embedding = self.transformer_model(target_,source)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
         embedding=embedding.permute(1,2,0)                                  # [16,bs,512]->[bs,512,16]
         # embedding=self.convup(embedding)
 
         ################################################
         ##segmentation
         ################################################
+        embedding = embedding.max(dim=-1, keepdim=False)[0]
+        embedding=embedding.unsqueeze(-1).repeat(1,1,num_points)
         x=torch.cat((x,embedding),dim=1)             # (batch_size,2048,num_points)+(batch_size, 1024,num_points) ->(batch_size, 3036,num_points)
         x=self.relu(self.bn5(self.conv5(x)))        # (batch_size, 3036,num_points)-> (batch_size, 512,num_points)
         x=self.dp5(x)

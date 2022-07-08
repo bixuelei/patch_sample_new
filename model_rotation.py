@@ -656,7 +656,7 @@ class PCT_patch_semseg(nn.Module):
 
         ################################################
         ##segmentation
-        ################################################
+        #################################################
         # embedding = embedding.max(dim=-1, keepdim=False)[0]
         # embedding=embedding.unsqueeze(-1).repeat(1,1,num_points)
         x=self.relu(self.bn5(self.conv5(x)))

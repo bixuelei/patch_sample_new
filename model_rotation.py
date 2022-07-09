@@ -572,7 +572,7 @@ class PCT_patch_semseg(nn.Module):
         self.convup = nn.Sequential(nn.Conv1d(256, 1024, kernel_size=1, bias=False),         
                                    self.bnup,        #2048
                                    nn.LeakyReLU(negative_slope=0.2))       
-        self.conv6 = nn.Conv1d(1024, 256, 1)
+        self.conv6 = nn.Conv1d(512, 256, 1)
         self.conv7 = nn.Conv1d(256, 7, 1)
         self.bn5 = nn.BatchNorm1d(512)
         self.bn6 = nn.BatchNorm1d(256)
@@ -648,7 +648,7 @@ class PCT_patch_semseg(nn.Module):
        #############################################
         ## Point Transformer
         #############################################
-        target = x_global.permute(2, 0, 1)                                        # [bs,1024,64]->[64,bs,1024]
+        target = self.relu(self.bn5(self.conv5(x))).permute(2, 0, 1)                                       # [bs,1024,64]->[64,bs,1024]
         source = x_patch.permute(2, 0, 1)                           # [bs,1024,10]->[10,bs,1024]
         embedding = self.transformer_model(source,target)                 # [64,bs,1024]+[16,bs,1024]->[16,bs,1024]
         embedding=embedding.permute(1,2,0)                                  # [16,bs,512]->[bs,512,16]
@@ -659,9 +659,9 @@ class PCT_patch_semseg(nn.Module):
         #################################################
         # embedding = embedding.max(dim=-1, keepdim=False)[0]
         # embedding=embedding.unsqueeze(-1).repeat(1,1,num_points)
-        x=self.relu(self.bn5(self.conv5(x)))
-        x=torch.cat((x,embedding),dim=1)             # (batch_size,2048,num_points)+(batch_size, 1024,num_points) ->(batch_size, 3036,num_points)
-        x=self.relu(self.bn6(self.conv6(x)))        # (batch_size, 512,num_points) ->(batch_size,256,num_points)
+        # x=self.relu(self.bn5(self.conv5(x)))
+        # x=torch.cat((x,embedding),dim=1)             # (batch_size,2048,num_points)+(batch_size, 1024,num_points) ->(batch_size, 3036,num_points)
+        x=self.relu(self.bn6(self.conv6(embedding)))        # (batch_size, 512,num_points) ->(batch_size,256,num_points)
         x=self.dp6(x)
         x=self.conv7(x)                             # # (batch_size, 256,num_points) ->(batch_size,6,num_points)
         

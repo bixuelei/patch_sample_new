@@ -140,7 +140,7 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
         # index1=knn(together1.permute(0, 2, 1),2)[0,0:goals_[0],1].unsqueeze(0)
         # added1=index_points(together1,index1)
         dis1=square_distance(points1.unsqueeze(0).float(),c1.unsqueeze(0).float())
-        index1=dis1.squeeze(0).max(dim=0, keepdim=False)[1]
+        index1=dis1.squeeze(0).min(dim=0, keepdim=False)[1]
         added1=index_points(points1.unsqueeze(0),index1.unsqueeze(0))
         _,sorted_index_clamping=added1.squeeze(0).sort(dim=0)
         sorted_index_clamping_x=sorted_index_clamping[:,0]
@@ -162,7 +162,7 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
         # Visuell__(together2.squeeze(0),inter)
         ###########################
         dis2=square_distance(points2.unsqueeze(0).float(),c2.unsqueeze(0).float())
-        index2=dis2.squeeze(0).max(dim=0, keepdim=False)[1]
+        index2=dis2.squeeze(0).min(dim=0, keepdim=False)[1]
         added2=index_points(points2.unsqueeze(0),index2.unsqueeze(0))
         # together2=torch.cat([c2,points2],dim=0).unsqueeze(0)
         # index2=knn(together2.permute(0, 2, 1),2)[0,0:goals_[1],1].unsqueeze(0)
@@ -179,7 +179,7 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
             points_gear_c=torch.sum(points_gear,dim=0)/torch.sum(points_gear,dim=0)
 
             dis3=square_distance(points_gear.unsqueeze(0).float(),points_gear_c.unsqueeze(0).unsqueeze(0).float())
-            index3=dis3.squeeze(0).max(dim=0, keepdim=False)[1]
+            index3=dis3.squeeze(0).min(dim=0, keepdim=False)[1]
             added3=index_points(points_gear.unsqueeze(0),index3.unsqueeze(0))
 
             gearcontainers[i,:,:]=added3[0,:,:]
@@ -195,7 +195,7 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
             points_charger_c=torch.sum(points_charger,dim=0)/torch.sum(points_charger,dim=0)
 
             dis4=square_distance(points_charger.unsqueeze(0).float(),points_charger_c.unsqueeze(0).unsqueeze(0).float())
-            index4=dis4.squeeze(0).max(dim=0, keepdim=False)[1]
+            index4=dis4.squeeze(0).min(dim=0, keepdim=False)[1]
             added4=index_points(points_charger.unsqueeze(0),index4.unsqueeze(0))
 
             chargers[i,:,:]=added4[0,:,:]
@@ -209,7 +209,7 @@ def find_goals_kmeans(points__,target__):  # [bs,n_points,C] [bs,n_points]
         # together5=torch.cat([points_bottom,points_bottom_c],dim=0).unsqueeze(0)
 
         dis5=square_distance(points_bottom.unsqueeze(0).float(),points_bottom_c.unsqueeze(0).unsqueeze(0).float())
-        index5=dis5.squeeze(0).max(dim=0, keepdim=False)[1]
+        index5=dis5.squeeze(0).min(dim=0, keepdim=False)[1]
         added5=index_points(points_bottom.unsqueeze(0),index5.unsqueeze(0))
         # index5=knn(together5.permute(0, 2, 1),2)[0,0:goals_[4],1].unsqueeze(0)
         # added5=index_points(together5,index5)
